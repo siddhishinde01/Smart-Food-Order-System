@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Track Order {{ order.id }} — FoodTech</title>
+<link rel="stylesheet" href="/static/css/style.css"/>
+<style>
+.track-hero{background:linear-gradient(135deg,var(--purple-700),var(--purple-500));color:white;padding:2.5rem;border-radius:var(--radius-xl);margin-bottom:1.5rem}
+.track-step{display:flex;align-items:center;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--gray-50)}
+.track-step:last-child{border-bottom:none}
+.track-step-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.track-step.done .track-step-icon{background:var(--success);color:white}
+.track-step.active .track-step-icon{background:var(--primary);color:white;animation:pulse-dot 1.5s infinite}
+.track-step.pending .track-step-icon{background:var(--gray-100);color:var(--gray-400)}
+.track-step-info h4{font-size:.9rem;font-weight:700;margin-bottom:.1rem}
+.track-step-info p{font-size:.78rem;color:var(--gray-500)}
+.partner-box{background:var(--purple-50);border:1.5px solid var(--purple-200);border-radius:var(--radius);padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/" class="navbar-brand"><div class="logo-icon">🍔</div>FoodTech</a>
+  <div class="navbar-links">
+    <a href="/">Home</a>
+    <a href="/dashboard" class="dashboard-btn">⚡ Command Center</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-content">
+
+    <div class="track-hero">
+      <div style="font-size:.78rem;opacity:.7;margin-bottom:.5rem;letter-spacing:.5px">ORDER TRACKING</div>
+      <h1 style="font-size:1.8rem;font-weight:900;margin-bottom:.3rem">{{ order.id }}</h1>
+      <p style="opacity:.85">{{ order.customer }} &nbsp;•&nbsp; ₹{{ order.total }}</p>
+      <div style="margin-top:1rem">
+        <span id="status-badge" class="badge badge-{{ order.status }}">
+          <span class="status-dot {{ order.status }}"></span>
+          {{ order.status.replace('_',' ').title() }}
+        </span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Tracking Steps -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">📍 Order Progress</span></div>
+        <div class="card-body" id="tracking-steps">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- AI Info -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">🤖 AI Intelligence</span></div>
+        <div class="card-body">
+          <div style="text-align:center;padding:1rem;background:linear-gradient(135deg,#1e1b4b,#4c1d95);border-radius:var(--radius);color:white;margin-bottom:1rem">
+            <div style="font-size:.7rem;opacity:.7;margin-bottom:.4rem">PRIORITY SCORE</div>
+            <div style="font-size:2.5rem;font-weight:900" id="t-score">—</div>
+            <div id="t-class" style="margin-top:.5rem;font-size:.82rem;font-weight:700"></div>
+          </div>
+
+          <div id="partner-box" style="display:none" class="partner-box">
+            <span style="font-size:1.8rem">🛵</span>
+            <div>
+              <div style="font-size:.75rem;color:var(--purple-600);font-weight:600;margin-bottom:.15rem">ASSIGNED PARTNER</div>
+              <div id="partner-name" style="font-weight:800;font-size:.95rem"></div>
+              <div id="partner-meta" style="font-size:.75rem;color:var(--gray-500);margin-top:.1rem"></div>
+            </div>
+          </div>
+
+          <div id="no-partner" style="padding:.75rem;background:var(--gray-50);border-radius:var(--radius);font-size:.82rem;color:var(--gray-500);margin-top:.5rem">
+            ⏳ Delivery partner will be assigned by AI shortly…
+          </div>
+
+          <hr class="section-sep"/>
+          <div>
+            <div style="font-size:.75rem;font-weight:700;color:var(--gray-500);margin-bottom:.5rem;letter-spacing:.4px">AI REASONING</div>
+            <ul class="reasoning-list" id="t-reasoning">
+              <li>Loading analysis…</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:2rem;display:flex;gap:1rem;justify-content:center">
+      <a href="/dashboard" class="btn btn-primary">⚡ Command Center</a>
+      <a href="/" class="btn btn-secondary">🏠 Home</a>
+    </div>
+
+  </div>
+</div>
+
+<link rel="stylesheet" href="/static/css/dashboard.css"/>
+<div id="toast-container"></div>
+<script src="/static/js/app.js"></script>
+<script>
+const ORDER_ID = '{{ order.id }}';
+const STATUSES = ['pending','preparing','out_for_delivery','delivered'];
+const STATUS_LABELS = {'pending':'Order Received','preparing':'Being Prepared','out_for_delivery':'Out for Delivery','delivered':'Delivered'};
+const STATUS_ICONS  = {'pending':'⏳','preparing':'👨‍🍳','out_for_delivery':'🛵','delivered':'✅'};
+const STATUS_DESC   = {
+  'pending':'Your order has been received and is in the AI priority queue',
+  'preparing':'The kitchen has started preparing your delicious food',
+  'out_for_delivery':'Your order is on its way! Estimated arrival soon',
+  'delivered':'Order delivered successfully. Enjoy your meal! 🎉'
+};
+
+function renderSteps(currentStatus){
+  const currentIdx=STATUSES.indexOf(currentStatus);
+  let html='';
+  STATUSES.forEach((s,i)=>{
+    const state=i<currentIdx?'done':i===currentIdx?'active':'pending';
+    html+=`<div class="track-step ${state}">
+      <div class="track-step-icon">${STATUS_ICONS[s]}</div>
+      <div class="track-step-info">
+        <h4>${STATUS_LABELS[s]}</h4>
+        <p>${state==='done'?'Completed ✓':state==='active'?STATUS_DESC[s]:'Waiting…'}</p>
+      </div>
+    </div>`;
+  });
+  document.getElementById('tracking-steps').innerHTML=html;
+}
+
+function loadOrder(){
+  fetch('/api/orders/'+ORDER_ID).then(r=>r.json()).then(d=>{
+    renderSteps(d.status||'pending');
+    document.getElementById('t-score').textContent=d.priority_score||'—';
+    const cls=d.priority_class||'NORMAL';
+    const colors={'CRITICAL':'#ef4444','HIGH':'#f97316','NORMAL':'#10b981','LOW':'#3b82f6'};
+    document.getElementById('t-class').innerHTML=`<span style="background:${colors[cls]||'#6b7280'};padding:.25rem .8rem;border-radius:99px;font-size:.72rem">${cls}</span>`;
+
+    if(d.partner_name){
+      document.getElementById('partner-box').style.display='flex';
+      document.getElementById('no-partner').style.display='none';
+      document.getElementById('partner-name').textContent=d.partner_name;
+    }
+
+    const reasoning=d.priority_reasoning||[];
+    document.getElementById('t-reasoning').innerHTML=reasoning.length
+      ? reasoning.map(r=>`<li>${r}</li>`).join('')
+      : '<li>Analysis complete — order progressing normally</li>';
+  });
+}
+
+renderSteps('{{ order.status }}');
+loadOrder();
+// Refresh every 15 seconds
+setInterval(loadOrder, 15000);
+</script>
+</body>
+</html>

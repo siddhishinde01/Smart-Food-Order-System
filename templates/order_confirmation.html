@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Order Confirmed — FoodTech</title>
+<link rel="stylesheet" href="/static/css/style.css"/>
+<style>
+.confirm-hero{text-align:center;padding:3rem 1rem 2rem}
+.confirm-check{width:80px;height:80px;background:linear-gradient(135deg,var(--purple-600),var(--purple-400));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;margin:0 auto 1.5rem;box-shadow:var(--shadow-purple);animation:popIn .5s ease}
+@keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+.confirm-id{display:inline-block;background:var(--purple-50);border:1.5px dashed var(--purple-300);border-radius:10px;padding:.6rem 1.5rem;font-size:1.2rem;font-weight:800;color:var(--primary);letter-spacing:1px;margin:1rem 0}
+.ai-score-box{background:linear-gradient(135deg,#1e1b4b,#4c1d95);color:white;border-radius:var(--radius-xl);padding:1.5rem;text-align:center;margin:1.5rem 0}
+.ai-score-box .score-num{font-size:3rem;font-weight:900;line-height:1}
+.timeline{position:relative;padding-left:2rem}
+.timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;background:var(--gray-100)}
+.timeline-item{position:relative;margin-bottom:1.5rem}
+.timeline-item::before{content:'';position:absolute;left:-25px;top:4px;width:14px;height:14px;border-radius:50%;border:2px solid var(--gray-200);background:white}
+.timeline-item.done::before{background:var(--success);border-color:var(--success)}
+.timeline-item.active::before{background:var(--primary);border-color:var(--primary);animation:pulse-dot 1.5s infinite}
+.timeline-item h4{font-size:.88rem;font-weight:700;margin-bottom:.1rem}
+.timeline-item p{font-size:.78rem;color:var(--gray-500)}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/" class="navbar-brand"><div class="logo-icon">🍔</div>FoodTech</a>
+  <div class="navbar-links">
+    <a href="/">Home</a>
+    <a href="/dashboard" class="dashboard-btn">⚡ Command Center</a>
+    <a href="/cart" class="nav-cart-btn">🛒 Cart <span class="cart-badge" id="cart-count">0</span></a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-content">
+
+    <div class="confirm-hero">
+      <div class="confirm-check">✓</div>
+      <h1 style="font-size:2rem;font-weight:900;margin-bottom:.5rem">Order Placed Successfully!</h1>
+      <p style="color:var(--gray-500);font-size:.95rem">Your order has been received and added to the FoodTech AI queue</p>
+      <div class="confirm-id">{{ order.id }}</div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Order Info -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">📦 Order Details</span></div>
+        <div class="card-body">
+          <div style="margin-bottom:1rem">
+            <div style="font-size:.75rem;color:var(--gray-500);margin-bottom:.15rem">RESTAURANT</div>
+            <div style="font-weight:700">{{ restaurant.name }}</div>
+          </div>
+          <div style="margin-bottom:1rem">
+            <div style="font-size:.75rem;color:var(--gray-500);margin-bottom:.15rem">CUSTOMER</div>
+            <div style="font-weight:700">{{ order.customer }}</div>
+          </div>
+          <div style="margin-bottom:1rem">
+            <div style="font-size:.75rem;color:var(--gray-500);margin-bottom:.15rem">ITEMS</div>
+            {% for item in order['items'] %}
+            <div style="font-size:.88rem;padding:.2rem 0">{{ item.qty }}× {{ item.name }} — ₹{{ item.price*item.qty }}</div>
+            {% endfor %}
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-top:.75rem;border-top:1px solid var(--gray-100);font-weight:800;font-size:1rem">
+            <span>Total</span><span style="color:var(--primary)">₹{{ order.total }}</span>
+          </div>
+          <div style="margin-top:1rem">
+            <span class="badge badge-pending">⏳ Pending</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Intelligence -->
+      <div>
+        <div class="ai-score-box">
+          <div style="font-size:.75rem;opacity:.7;letter-spacing:.5px;margin-bottom:.5rem">🤖 AI PRIORITY SCORE</div>
+          <div class="score-num" id="priority-score">—</div>
+          <div style="font-size:.8rem;opacity:.7;margin-top:.25rem">Calculating…</div>
+          <div id="priority-class" style="margin-top:.75rem;font-size:.9rem;font-weight:700"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">🗺️ Delivery Timeline</span></div>
+          <div class="card-body">
+            <div class="timeline">
+              <div class="timeline-item done">
+                <h4>Order Received</h4>
+                <p>Your order is in the FoodTech system</p>
+              </div>
+              <div class="timeline-item active">
+                <h4>AI Queue Analysis</h4>
+                <p>Priority score being calculated</p>
+              </div>
+              <div class="timeline-item">
+                <h4>Preparation</h4>
+                <p>Restaurant kitchen will start soon</p>
+              </div>
+              <div class="timeline-item">
+                <h4>Delivery Partner Assigned</h4>
+                <p>Best partner will be assigned by AI</p>
+              </div>
+              <div class="timeline-item">
+                <h4>Out for Delivery</h4>
+                <p>En route to your location</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:2rem;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+      <a href="/tracking/{{ order.id }}" class="btn btn-primary">📍 Track Order</a>
+      <a href="/dashboard" class="btn btn-secondary">⚡ View Command Center</a>
+      <a href="/" class="btn btn-secondary">🏠 Back to Home</a>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/app.js"></script>
+<script>
+updateCartBadge();
+// Load priority score for this order
+setTimeout(()=>{
+  fetch('/api/orders/{{ order.id }}').then(r=>r.json()).then(d=>{
+    const score=d.priority_score||0;
+    document.getElementById('priority-score').textContent=score;
+    const cls=d.priority_class||'NORMAL';
+    const colors={'CRITICAL':'#ef4444','HIGH':'#f97316','NORMAL':'#10b981','LOW':'#3b82f6'};
+    document.getElementById('priority-class').innerHTML=`<span style="background:${colors[cls]||'#6b7280'};padding:.3rem .9rem;border-radius:99px;font-size:.78rem">${cls} PRIORITY</span>`;
+  });
+},1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>FoodTech Command Center</title>
+<meta name="description" content="FoodTech AI Command Center — smart order management, delay prediction and delivery intelligence."/>
+<link rel="stylesheet" href="/static/css/style.css"/>
+<link rel="stylesheet" href="/static/css/dashboard.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+body{background:#f1f0fb}
+.dash-wrap{padding:1.5rem;max-width:1440px;margin:0 auto}
+.order-priority-indicator{width:12px;height:12px;border-radius:50%;flex-shrink:0;display:inline-block}
+.CRITICAL{--c:#dc2626} .HIGH{--c:#ea580c} .NORMAL{--c:#16a34a} .LOW{--c:#2563eb}
+.pri-indicator.CRITICAL{background:#dc2626;box-shadow:0 0 6px #dc262660;animation:pulse-dot 1s infinite}
+.pri-indicator.HIGH    {background:#ea580c}
+.pri-indicator.NORMAL  {background:#16a34a}
+.pri-indicator.LOW     {background:#2563eb}
+.order-row-critical td{background:#fff5f5!important}
+.action-btn{padding:.3rem .7rem;border-radius:7px;border:1.5px solid var(--gray-200);background:white;font-size:.72rem;font-weight:600;cursor:pointer;transition:var(--transition)}
+.action-btn:hover{background:var(--purple-50);border-color:var(--primary);color:var(--primary)}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/" class="navbar-brand"><div class="logo-icon">🍔</div>FoodTech</a>
+  <div class="navbar-links">
+    <a href="/">Customer View</a>
+    <a href="/dashboard" class="active">Command Center</a>
+  </div>
+</nav>
+
+<div class="dash-wrap">
+
+  <!-- Header -->
+  <div class="dashboard-header" style="margin-bottom:1.25rem">
+    <div>
+      <h1>⚡ FoodTech Command Center</h1>
+      <p>Smart Food Delivery Order Management Platform — AI-powered intelligence dashboard</p>
+    </div>
+    <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+      <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+      <div class="refresh-timer">🔄 Auto-refresh: <span id="countdown">30</span>s</div>
+      <button class="btn btn-secondary btn-sm" onclick="loadAll()">⟳ Refresh Now</button>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid" style="margin-bottom:1.25rem" id="kpi-grid">
+    <div class="kpi-card" style="--kpi-color:var(--primary);--kpi-bg:var(--purple-50)">
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-value" id="kpi-active">—</div>
+      <div class="kpi-label">Active Orders</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--danger);--kpi-bg:#fef2f2">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-value" id="kpi-risk">—</div>
+      <div class="kpi-label">Orders At Risk</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--info);--kpi-bg:#eff6ff">
+      <div class="kpi-icon">⏱️</div>
+      <div class="kpi-value" id="kpi-eta">—</div>
+      <div class="kpi-label">Avg ETA (min)</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--success);--kpi-bg:#f0fdf4">
+      <div class="kpi-icon">🛵</div>
+      <div class="kpi-value" id="kpi-partners">—</div>
+      <div class="kpi-label">Available Partners</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--warning);--kpi-bg:#fffbeb">
+      <div class="kpi-icon">🏪</div>
+      <div class="kpi-value" id="kpi-load">—</div>
+      <div class="kpi-label">Avg Kitchen Load</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#8b5cf6;--kpi-bg:#f5f3ff">
+      <div class="kpi-icon">✅</div>
+      <div class="kpi-value" id="kpi-delivered">—</div>
+      <div class="kpi-label">Delivered Today</div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-list">
+    <button class="tab-btn active" onclick="switchTab('orders',this)">📋 Live Order Queue</button>
+    <button class="tab-btn" onclick="switchTab('ai',this)">🤖 AI Recommendations</button>
+    <button class="tab-btn" onclick="switchTab('delay',this)">⚠️ Delay Monitor</button>
+    <button class="tab-btn" onclick="switchTab('whatif',this)">🔮 What-If Simulator</button>
+    <button class="tab-btn" onclick="switchTab('partners',this)">🛵 Delivery Partners</button>
+    <button class="tab-btn" onclick="switchTab('charts',this)">📊 Analytics</button>
+  </div>
+
+  <!-- ═══ TAB: ORDER QUEUE ════════════════════════════════════════════════ -->
+  <div class="tab-panel active" id="tab-orders">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📋 Live Order Queue <span id="order-count-badge" class="badge badge-purple" style="margin-left:.5rem"></span></span>
+        <div style="display:flex;gap:.5rem">
+          <select class="filter-select" id="status-filter" onchange="renderOrderTable()">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="preparing">Preparing</option>
+            <option value="out_for_delivery">Out for Delivery</option>
+            <option value="delivered">Delivered</option>
+          </select>
+          <select class="filter-select" id="priority-filter" onchange="renderOrderTable()">
+            <option value="">All Priorities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="NORMAL">Normal</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="order-table">
+          <thead>
+            <tr>
+              <th>Priority</th>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Restaurant</th>
+              <th>Items</th>
+              <th>Prep Time</th>
+              <th>Distance</th>
+              <th>Status</th>
+              <th>Partner</th>
+              <th>Score</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="order-tbody">
+            <tr><td colspan="11" style="text-align:center;padding:3rem;color:var(--gray-400)"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: AI RECOMMENDATIONS ════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-ai">
+    <div class="grid-2">
+      <div class="ai-panel" id="rec-panel">
+        <div class="ai-panel-header">
+          <div class="ai-icon">🤖</div>
+          <div><h2>AI Recommendation Engine</h2><p>Real-time actionable intelligence from order data</p></div>
+        </div>
+        <div id="rec-list"><div style="color:rgba(255,255,255,.5);text-align:center;padding:2rem"><div class="spinner"></div></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">📦 Smart Batching Opportunities</span></div>
+        <div class="card-body" id="batch-list">
+          <div style="text-align:center;padding:2rem;color:var(--gray-400)"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: DELAY MONITOR ═════════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-delay">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">⚠️ Predictive Delay Monitor</span>
+        <span class="badge badge-at_risk" id="delay-count-badge"></span>
+      </div>
+      <div class="card-body" id="delay-list">
+        <div style="text-align:center;padding:2rem"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: WHAT-IF SIMULATOR ═════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-whatif">
+    <div class="whatif-card">
+      <div class="whatif-header">
+        <h2>🔮 What-If Simulator</h2>
+        <p>Simulate order surges to see AI-predicted impact and recommended actions</p>
+      </div>
+      <div class="whatif-body">
+        <div class="whatif-controls">
+          <div class="whatif-input-group">
+            <label>Simulate extra orders:</label>
+            <input type="number" id="extra-orders" value="5" min="1" max="20"/>
+          </div>
+          <button class="btn btn-primary" onclick="runSimulation()">⚡ Run Simulation</button>
+          <button class="btn btn-secondary" onclick="resetSimulation()">↩ Reset</button>
+        </div>
+
+        <div id="simulation-result" style="display:none">
+          <div class="comparison-grid">
+            <div class="comparison-panel before">
+              <h3>📊 Before Surge</h3>
+              <div id="before-panel"></div>
+            </div>
+            <div class="comparison-arrow">→</div>
+            <div class="comparison-panel after">
+              <h3>🚨 After Surge</h3>
+              <div id="after-panel"></div>
+            </div>
+          </div>
+          <div class="ai-action-box">
+            <div style="font-size:1.5rem">🤖</div>
+            <div>
+              <div class="ai-label">AI RECOMMENDED ACTION</div>
+              <p id="ai-action-text"></p>
+            </div>
+          </div>
+        </div>
+
+        <div id="simulation-placeholder" style="text-align:center;padding:3rem;color:var(--gray-400)">
+          <div style="font-size:3rem;margin-bottom:1rem">🔮</div>
+          <h3 style="color:var(--gray-500)">Run a simulation to see impact</h3>
+          <p style="font-size:.85rem">Adjust the order count and click Run Simulation</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: PARTNERS ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-partners">
+    <div id="partners-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem">
+      <div style="text-align:center;padding:3rem;color:var(--gray-400)"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: CHARTS ═════════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-charts">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><span class="card-title">📊 Orders by Status</span></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="status-chart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">🎯 Priority Distribution</span></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="priority-chart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">🏪 Restaurant Load</span></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="load-chart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">📈 Risk vs ETA</span></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="risk-chart"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /dash-wrap -->
+
+<!-- Order Detail Modal -->
+<div class="modal-backdrop" id="order-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Order Details</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div style="text-align:center;padding:3rem"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/app.js"></script>
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>

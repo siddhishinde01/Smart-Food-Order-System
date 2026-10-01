@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>FoodTech — Smart Food Delivery</title>
+<meta name="description" content="FoodTech: AI-powered smart food delivery with intelligent order management, delay prediction, and real-time optimization."/>
+<link rel="stylesheet" href="/static/css/style.css"/>
+<style>
+.restaurant-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;margin-top:2rem}
+.restaurant-card{background:white;border-radius:var(--radius-xl);box-shadow:var(--shadow);border:1px solid var(--gray-100);overflow:hidden;cursor:pointer;transition:var(--transition)}
+.restaurant-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg)}
+.restaurant-card-header{height:140px;display:flex;align-items:center;justify-content:center;font-size:4rem;position:relative}
+.restaurant-card-body{padding:1.25rem}
+.restaurant-name{font-size:1.05rem;font-weight:800;margin-bottom:.25rem}
+.restaurant-meta{display:flex;align-items:center;gap:.75rem;font-size:.8rem;color:var(--gray-500);margin-bottom:.8rem}
+.restaurant-load{height:5px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin-top:.75rem}
+.restaurant-load-fill{height:100%;border-radius:99px;transition:width .5s}
+.features-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.25rem;margin:3rem 0}
+.feature-chip{background:white;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);box-shadow:var(--shadow);text-align:center}
+.feature-chip .icon{font-size:2.2rem;margin-bottom:.75rem}
+.feature-chip h3{font-size:.95rem;font-weight:700;margin-bottom:.3rem}
+.feature-chip p{font-size:.8rem;color:var(--gray-500)}
+.stats-bar{background:linear-gradient(135deg,var(--purple-700),var(--purple-500));border-radius:var(--radius-xl);padding:2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1rem;text-align:center;color:white;margin-bottom:3rem}
+.stat-num{font-size:2rem;font-weight:900;line-height:1}
+.stat-label{font-size:.75rem;opacity:.8;margin-top:.3rem}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/" class="navbar-brand"><div class="logo-icon">🍔</div>FoodTech</a>
+  <div class="navbar-links">
+    <a href="/" class="active">Home</a>
+    <a href="/dashboard" class="dashboard-btn">⚡ Command Center</a>
+    <a href="/cart" class="nav-cart-btn">🛒 Cart <span class="cart-badge" id="cart-count">0</span></a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-content">
+    <div style="display:inline-flex;align-items:center;gap:.5rem;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:99px;padding:.4rem 1.1rem;font-size:.8rem;font-weight:600;margin-bottom:1.5rem">
+      🤖 AI-Powered Order Intelligence
+    </div>
+    <h1>Smart Food Delivery,<br/>Intelligently Managed</h1>
+    <p>FoodTech uses AI to predict delays, optimize delivery routes, and prioritize orders — so your food arrives faster, every time.</p>
+    <div class="hero-cta">
+      <button class="btn-white" onclick="document.getElementById('restaurants').scrollIntoView({behavior:'smooth'})">🍽️ Order Now</button>
+      <a href="/dashboard"><button class="btn-outline-white">⚡ View Command Center</button></a>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="page-content">
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div><div class="stat-num" id="stat-active">—</div><div class="stat-label">Active Orders</div></div>
+      <div><div class="stat-num" id="stat-partners">—</div><div class="stat-label">Delivery Partners</div></div>
+      <div><div class="stat-num" id="stat-eta">—</div><div class="stat-label">Avg ETA (min)</div></div>
+      <div><div class="stat-num">98%</div><div class="stat-label">On-Time Rate</div></div>
+    </div>
+
+    <!-- Features -->
+    <div class="features-row">
+      <a href="/dashboard?tab=ai" class="feature-chip" style="text-decoration:none;color:inherit">
+        <div class="icon">🧠</div>
+        <h3>AI Priority Engine</h3>
+        <p>Dynamically scores every order using 6 real-time factors</p>
+      </a>
+      <a href="/dashboard?tab=delay" class="feature-chip" style="text-decoration:none;color:inherit">
+        <div class="icon">⚠️</div>
+        <h3>Delay Prediction</h3>
+        <p>Predicts delays before they happen and triggers alerts</p>
+      </a>
+      <a href="/dashboard?tab=partners" class="feature-chip" style="text-decoration:none;color:inherit">
+        <div class="icon">🛵</div>
+        <h3>Smart Assignment</h3>
+        <p>Recommends best delivery partner for every order</p>
+      </a>
+      <a href="/dashboard?tab=whatif" class="feature-chip" style="text-decoration:none;color:inherit">
+        <div class="icon">🔮</div>
+        <h3>What-If Simulation</h3>
+        <p>Simulate surges and see AI-recommended actions</p>
+      </a>
+    </div>
+
+    <!-- Restaurants -->
+    <div id="restaurants">
+      <div class="section-title">🏪 Our Restaurants</div>
+      <div class="section-subtitle">Select a restaurant to browse their menu and place an order</div>
+      <div class="restaurant-grid" id="restaurant-grid">
+        {% for r in restaurants %}
+        <a href="/menu/{{ r.id }}" class="restaurant-card">
+          <div class="restaurant-card-header" style="background:linear-gradient(135deg,var(--purple-50),var(--purple-100))">
+            <span>{{ r.image }}</span>
+          </div>
+          <div class="restaurant-card-body">
+            <div class="restaurant-name">{{ r.name }}</div>
+            <div class="restaurant-meta">
+              <span>⭐ {{ r.rating }}</span>
+              <span>•</span>
+              <span>{{ r.cuisine }}</span>
+              <span>•</span>
+              <span>~{{ r.prep_base_time }} min</span>
+            </div>
+            <div style="font-size:.75rem;color:var(--gray-400);margin-bottom:.5rem">Zone: {{ r.zone }}</div>
+            <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--gray-500);margin-bottom:.4rem">
+              <span>Kitchen Load</span>
+              <span id="load-{{ r.id }}">Updating…</span>
+            </div>
+            <div class="restaurant-load">
+              <div class="restaurant-load-fill" id="load-bar-{{ r.id }}" style="width:0%;background:var(--primary)"></div>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="/static/js/app.js"></script>
+<script>
+updateCartBadge();
+// Load live stats
+fetch('/api/dashboard/summary').then(r=>r.json()).then(d=>{
+  document.getElementById('stat-active').textContent = d.active_orders;
+  document.getElementById('stat-partners').textContent = d.available_partners;
+  document.getElementById('stat-eta').textContent = d.avg_eta_min;
+  d.restaurants.forEach(r=>{
+    const el=document.getElementById('load-'+r.id);
+    const bar=document.getElementById('load-bar-'+r.id);
+    if(el){ el.textContent = r.load+'%'; }
+    if(bar){
+      bar.style.width=r.load+'%';
+      bar.style.background=r.load>=80?'var(--danger)':r.load>=60?'var(--warning)':'var(--success)';
+    }
+  });
+});
+</script>
+</body>
+</html>

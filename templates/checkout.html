@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Checkout — FoodTech</title>
+<link rel="stylesheet" href="/static/css/style.css"/>
+<style>
+.checkout-grid{display:grid;grid-template-columns:1fr 360px;gap:1.5rem;align-items:start}
+@media(max-width:768px){.checkout-grid{grid-template-columns:1fr}}
+.step-indicator{display:flex;align-items:center;gap:.5rem;margin-bottom:2rem}
+.step{display:flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:600;color:var(--gray-400)}
+.step.done{color:var(--success)}
+.step.active{color:var(--primary)}
+.step-num{width:26px;height:26px;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0}
+.step-divider{flex:1;height:2px;background:var(--gray-200);max-width:40px}
+.zone-select{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
+.zone-btn{padding:.6rem;border:1.5px solid var(--gray-200);border-radius:10px;background:white;cursor:pointer;font-size:.8rem;font-weight:600;text-align:center;transition:var(--transition)}
+.zone-btn.selected{border-color:var(--primary);background:var(--purple-50);color:var(--primary)}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/" class="navbar-brand"><div class="logo-icon">🍔</div>FoodTech</a>
+  <div class="navbar-links">
+    <a href="/cart">← Cart</a>
+    <a href="/dashboard" class="dashboard-btn">⚡ Command Center</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-content">
+
+    <!-- Steps -->
+    <div class="step-indicator">
+      <div class="step done"><div class="step-num">✓</div> Cart</div>
+      <div class="step-divider"></div>
+      <div class="step active"><div class="step-num">2</div> Checkout</div>
+      <div class="step-divider"></div>
+      <div class="step"><div class="step-num">3</div> Confirmation</div>
+    </div>
+
+    <div class="checkout-grid">
+      <!-- Form -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">📋 Delivery Details</span></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input class="form-control" id="customer-name" placeholder="Enter your name" required/>
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input class="form-control" id="customer-phone" placeholder="+91-XXXXXXXXXX"/>
+          </div>
+          <div class="form-group">
+            <label>Delivery Address</label>
+            <input class="form-control" id="delivery-address" placeholder="House/Flat, Street, Area"/>
+          </div>
+          <div class="form-group">
+            <label>Delivery Zone</label>
+            <div class="zone-select" id="zone-select">
+              <button class="zone-btn selected" data-zone="North"    onclick="selectZone('North',this)">🗺️ North</button>
+              <button class="zone-btn"           data-zone="Central" onclick="selectZone('Central',this)">🗺️ Central</button>
+              <button class="zone-btn"           data-zone="South"   onclick="selectZone('South',this)">🗺️ South</button>
+              <button class="zone-btn"           data-zone="East"    onclick="selectZone('East',this)">🗺️ East</button>
+              <button class="zone-btn"           data-zone="West"    onclick="selectZone('West',this)">🗺️ West</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Special Instructions (optional)</label>
+            <textarea class="form-control" id="notes" rows="3" placeholder="Any allergies, preferences, or delivery notes…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary + Place Order -->
+      <div>
+        <div class="card" style="position:sticky;top:calc(var(--nav-h)+1rem)">
+          <div class="card-header"><span class="card-title">📦 Order Summary</span></div>
+          <div class="card-body">
+            <div id="checkout-items" style="margin-bottom:1rem"></div>
+            <div style="padding-top:.75rem;border-top:1px solid var(--gray-100)">
+              <div style="display:flex;justify-content:space-between;font-size:.85rem;color:var(--gray-500);margin-bottom:.3rem"><span>Subtotal</span><span id="c-sub">₹0</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:.85rem;color:var(--gray-500);margin-bottom:.3rem"><span>Delivery</span><span>₹40</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:.85rem;color:var(--gray-500);margin-bottom:.75rem"><span>Tax</span><span id="c-tax">₹0</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:800;color:var(--gray-900)"><span>Total</span><span id="c-total">₹0</span></div>
+            </div>
+            <div style="margin:1rem 0;padding:.75rem;background:var(--purple-50);border-radius:10px;font-size:.78rem;color:var(--purple-700)">
+              🤖 FoodTech AI will automatically prioritize your order and assign the best available delivery partner.
+            </div>
+            <button class="btn btn-primary w-full btn-lg" id="place-order-btn" onclick="placeOrder()">
+              🚀 Place Order
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/app.js"></script>
+<script>
+let selectedZone='North';
+
+function selectZone(zone,btn){
+  selectedZone=zone;
+  document.querySelectorAll('.zone-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function renderCheckoutSummary(){
+  const cart=getCart();
+  if(!cart.length){ window.location.href='/cart'; return; }
+  let sub=0,html='';
+  cart.forEach(item=>{
+    sub+=item.price*item.qty;
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;font-size:.85rem;border-bottom:1px solid var(--gray-50)">
+      <span>${item.qty}× ${item.name}</span><span style="font-weight:700">₹${item.price*item.qty}</span>
+    </div>`;
+  });
+  document.getElementById('checkout-items').innerHTML=html;
+  const tax=Math.round(sub*0.05);
+  document.getElementById('c-sub').textContent='₹'+sub;
+  document.getElementById('c-tax').textContent='₹'+tax;
+  document.getElementById('c-total').textContent='₹'+(sub+40+tax);
+}
+
+async function placeOrder(){
+  const name=document.getElementById('customer-name').value.trim();
+  const phone=document.getElementById('customer-phone').value.trim();
+  const addr=document.getElementById('delivery-address').value.trim();
+  const notes=document.getElementById('notes').value.trim();
+
+  if(!name){ showToast('Please enter your name','error'); return; }
+  if(!addr){ showToast('Please enter delivery address','error'); return; }
+
+  const cart=getCart();
+  if(!cart.length){ showToast('Cart is empty!','error'); return; }
+
+  const btn=document.getElementById('place-order-btn');
+  btn.disabled=true;
+  btn.textContent='Placing order…';
+
+  let sub=0;
+  cart.forEach(i=>sub+=(Number(i.price)||0)*(Number(i.qty)||1));
+  const tax=Math.round(sub*0.05);
+  const total=sub+40+tax;
+
+  const restId = (cart[0] && cart[0].restaurant_id) ? cart[0].restaurant_id : 'R1';
+
+  const payload={
+    customer_name: name,
+    phone: phone,
+    delivery_address: addr,
+    delivery_zone: selectedZone,
+    notes: notes,
+    restaurant_id: restId,
+    items: cart.map(i=>({
+      menu_id: i.menu_id || i.id || 'M1',
+      id: i.menu_id || i.id || 'M1',
+      name: i.name || 'Food Item',
+      qty: Number(i.qty)||1,
+      price: Number(i.price)||0
+    })),
+    total: total,
+  };
+
+  try{
+    const res=await fetch('/api/orders',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    if(!res.ok){
+      const errText = await res.text();
+      console.error('Server order error:', res.status, errText);
+      showToast('Error placing order (Server status ' + res.status + '). Try again.','error');
+      btn.disabled=false; btn.textContent='🚀 Place Order';
+      return;
+    }
+    const data=await res.json();
+    if(data.success && data.order_id){
+      localStorage.removeItem('ft_cart');
+      updateCartBadge();
+      window.location.href='/order-confirmation/'+data.order_id;
+    } else {
+      showToast('Failed to place order. Try again.','error');
+      btn.disabled=false; btn.textContent='🚀 Place Order';
+    }
+  } catch(e){
+    console.error('Place order exception:', e);
+    showToast('Error: ' + e.message, 'error');
+    btn.disabled=false; btn.textContent='🚀 Place Order';
+  }
+}
+
+renderCheckoutSummary();
+updateCartBadge();
+</script>
+</body>
+</html>
